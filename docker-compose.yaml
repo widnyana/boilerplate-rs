@@ -1,0 +1,38 @@
+version: '3.7'
+
+networks:
+  container-network:
+    driver: bridge
+
+services:
+  postgres:
+    container_name: postgres
+    build:
+      context: etc/oci/postgres
+      dockerfile: Dockerfile
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD: postgres
+      PGDATA: /data/postgres
+      POSTGRES_HOST_AUTH_METHOD: md5
+    volumes:
+      - postgres:/data/postgres
+    ports:
+      - "5432:5432"
+    networks:
+      - container-network
+    restart: "no"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres:
+    driver: local
+    driver_opts:
+      type: 'none'
+      o: 'bind'
+      device: './etc/oci/tmp-data/postgres/14'

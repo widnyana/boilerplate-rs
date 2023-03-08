@@ -1,0 +1,6 @@
+[print_schema]
+file = "backend/src/models/schema.rs"
+
+[migrations_directory]
+dir = "migrations"
+

@@ -1,0 +1,13 @@
+[package]
+name = "common"
+version = "0.1.0"
+edition = "2021"
+publish = false
+authors = [
+    "Widnyana Putra <wid@widnyana.web.id>"
+]
+
+[dependencies]
+dotenvy = "0.15.6"
+envconfig = "0.10.0"
+tracing-subscriber = { version = "0.3.16", features = ["json"] }
