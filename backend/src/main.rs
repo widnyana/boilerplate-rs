@@ -21,7 +21,6 @@ use infrastructure::env;
 
 use crate::state::AppState;
 
-mod app;
 mod shared;
 mod state;
 
