@@ -1,0 +1,15 @@
+[package]
+name = "infrastructure"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+arc-swap = "1.6.0"
+lazy_static = "1.4.0"
+slog = { version = "2.7.0", features = ["nested-values", "max_level_trace"] }
+
+
+[lib]
+path = "src/lib.rs"

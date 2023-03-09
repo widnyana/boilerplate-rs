@@ -1,32 +1,27 @@
 [workspace]
 members = [
-    "common",
-    "migration",
-    "backend"
-
+	"backend",
+	"crates/common",
+	"crates/infrastructure"
 ]
 
 [workspace.dependencies]
 axum = "0.6.10"
 tower-http = { version = "0.4.0", features = ["cors", "fs", "compression-gzip"] }
-sea-orm = { version = "^0", features = [ "sqlx-postgres", "runtime-tokio-native-tls", "macros" ] }
 
 
 [workspace.package]
-name = "common"
 version = "0.1.0"
 edition = "2021"
 publish = false
 repository = "https://github.com/widnyana/env-compare"
-authors = [
-    "Widnyana Putra <wid@widnyana.web.id>"
-]
+authors = ["Widnyana Putra <wid@widnyana.web.id>"]
 
 
 [profile.release]
-codegen-units = 1 
-debug = true
-lto = true 
-opt-level = "z" # Optimize for size.
-panic = 'abort' 
-strip = "symbols" # none(false) debuginfo symbols(true).
+codegen-units = 1
+debug = false
+lto = true
+opt-level = "z"
+panic = 'abort'
+strip = "true"

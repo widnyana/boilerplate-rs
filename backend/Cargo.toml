@@ -9,11 +9,18 @@ authors = [
 
 
 [dependencies]
+common = {path = "../crates/common" }
+infrastructure = {path = "../crates/infrastructure" }
+
 axum = { workspace = true, features = ["headers"] }
 dotenvy = "0.15.6"
 hyper = "0.14.24"
 tokio = { version = "1.26.0", features = ["full"] }
 tower-http = { version = "0.4.0", features = ["cors", "fs", "compression-gzip", "metrics", "tower", "trace", "add-extension", "auth", "base64", "full"] }
 tracing = "0.1.37"
-tracing-subscriber = "0.3.16"
-
+tracing-subscriber = { version = "0.3.16", features = ["env-filter", "serde_json", "time"] }
+lazy_static = "1.4.0"
+slog-env-cfg = "0.6.0"
+slog = { version = "2.7.0", features = ["nested-values"] }
+slog-term = "2.9.0"
+slog-json = "2.6.1"

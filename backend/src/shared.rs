@@ -10,7 +10,20 @@ use axum:: {
 pub struct State {
 }
 
-async fn buffer_and_print<B>(direction: &str, body: B) -> Result<Bytes, (StatusCode, String)>
+pub async fn shutdown_signal(){
+	tokio::signal::ctrl_c()
+        .await
+        .expect("Expect shutdown signal handler");
+	println!("signal shutdown");
+
+}
+
+pub async fn handler_404() -> impl IntoResponse {
+	(StatusCode::NOT_FOUND, "nothing to see here")
+}
+
+
+pub async fn buffer_and_print<B>(direction: &str, body: B) -> Result<Bytes, (StatusCode, String)>
 where
     B: axum::body::HttpBody<Data = Bytes>,
     B::Error: std::fmt::Display,
@@ -33,7 +46,7 @@ where
 }
 
 
-async fn print_request_response(
+pub async fn print_request_response(
     req: Request<Body>,
     next: Next<Body>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {

@@ -4,11 +4,12 @@ use envconfig::Envconfig;
 #[derive(Envconfig)]
 pub struct HTTPConfig {
     #[envconfig(from = "HTTP_HOST")]
-    pub Host: string,
+    pub host: String,
     #[envconfig(from = "HTTP_PORT")]
-    pub Port: u16,
+    pub port: u16,
 }
 
+#[derive(Envconfig)]
 pub struct Config {
     #[envconfig(nested = true)]
     http: HTTPConfig

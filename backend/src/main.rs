@@ -1,31 +1,36 @@
-use axum::{http::Method, routing::get, Router};
-use std::{net::SocketAddr, sync::Arc};
-use tracing::Level;
+use axum::{
+    http::Method,
+    middleware::{self},
+    routing::get,
+    Router,
+};
+use slog::{o, Drain};
 
+use std::{net::SocketAddr, sync::Arc, sync::Mutex};
 use tower_http::{
     add_extension::AddExtensionLayer,
     cors::{Any, CorsLayer},
-    trace::{DefaultMakeSpan, DefaultOnRequest, DefaultOnResponse, TraceLayer},
-    LatencyUnit,
 };
-
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-
-mod shared;
+use backend::shared;
+use infrastructure::{info, set_global};
 
 #[tokio::main]
 async fn main() {
     let state = shared::State {};
+    let plain = slog_term::PlainSyncDecorator::new(std::io::stdout());
+    let logger = slog::Logger::root(
+        Mutex::new(slog_json::Json::default(std::io::stderr())).map(slog::Fuse),
+        o!("version" => env!("CARGO_PKG_VERSION")),
+    );
+
+    set_global(logger);
 
     tracing_subscriber::registry()
-        .with(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "example_print_request_response=debug,tower_http=debug".into()),
-        )
+        .with(tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "example_print_request_response=debug,tower_http=debug".into()))
         .with(tracing_subscriber::fmt::layer())
         .init();
-
 
     // CORS
     let cors = CorsLayer::new()
@@ -35,19 +40,19 @@ async fn main() {
 
     let svc = Router::new()
         .route("/", get(root))
+        .fallback(shared::handler_404)
+        .layer(middleware::from_fn(shared::print_request_response))
         .layer(cors)
-        .layer(
-            TraceLayer::new_for_http()
-                .make_span_with(DefaultMakeSpan::new().include_headers(true))
-                // .on_request(DefaultOnRequest::new().level(Level::INFO))
-                .on_response(DefaultOnResponse::new().level(Level::INFO).latency_unit(LatencyUnit::Micros)),
-        )
         .layer(AddExtensionLayer::new(Arc::new(state)));
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
-    println!("listening on {}", addr);
 
-    axum::Server::bind(&addr).serve(svc.into_make_service()).await.unwrap();
+    info!("http server is running"; "bind_addr" => addr);
+    axum::Server::bind(&addr)
+        .serve(svc.into_make_service())
+        .with_graceful_shutdown(shared::shutdown_signal())
+        .await
+        .unwrap();
 }
 
 async fn root() -> &'static str {
