@@ -1,5 +1,5 @@
 [package]
-name = "infrastructure"
+name = "logger"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,12 +7,8 @@ edition = "2021"
 
 [dependencies]
 arc-swap = "1.6.0"
-axum-extra = { version = "0.7.0", features = ["cookie"] }
 lazy_static = "1.4.0"
-once_cell = "1.17.1"
 slog = { version = "2.7.0", features = ["nested-values", "max_level_trace"] }
-thiserror = "1.0.39"
-
 
 [lib]
 path = "src/lib.rs"

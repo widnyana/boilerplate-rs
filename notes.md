@@ -7,6 +7,7 @@
 
 
 ## Repos
+- https://github.com/matze/wastebin/
 - https://github.com/flosse/clean-architecture-with-rust
 - https://github.com/lingdu1234/axum_admin/tree/axum-openapi/bin
 - https://github.com/joelparkerhenderson/demo-rust-axum

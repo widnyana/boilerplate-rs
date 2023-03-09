@@ -1,58 +1,97 @@
-use axum::{
-    http::Method,
-    middleware::{self},
-    routing::get,
-    Router,
-};
+#![forbid(unsafe_code)]
+#![allow(clippy::new_without_default)]
+#![deny(rust_2018_idioms)]
+// #![allow(unused_imports,missing_docs,unused_variables, dead_code, unused_macros)]
+// #![deny(unsafe_code)]
+
+use std::process::ExitCode;
+use std::sync::Mutex;
+
+use axum::extract::DefaultBodyLimit;
+use axum::http::Method;
+use axum::{Router, Server};
 use slog::{o, Drain};
+use tower::ServiceBuilder;
+use tower_http::compression::CompressionLayer;
+use tower_http::cors::{Any, CorsLayer};
+use tower_http::trace::TraceLayer;
+use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
-use std::{net::SocketAddr, sync::Arc, sync::Mutex};
-use tower_http::{
-    add_extension::AddExtensionLayer,
-    cors::{Any, CorsLayer},
-};
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+use infrastructure::env;
 
-use backend::shared;
-use infrastructure::{info, set_global};
+use crate::state::AppState;
 
-#[tokio::main]
-async fn main() {
-    let state = shared::State {};
-    let plain = slog_term::PlainSyncDecorator::new(std::io::stdout());
-    let logger = slog::Logger::root(
+mod app;
+mod shared;
+mod state;
+
+fn setup_logging() {
+    // logging
+    let slogger = slog::Logger::root(
         Mutex::new(slog_json::Json::default(std::io::stderr())).map(slog::Fuse),
         o!("version" => env!("CARGO_PKG_VERSION")),
     );
 
-    set_global(logger);
+    logger::set_global(slogger);
+}
 
-    tracing_subscriber::registry()
-        .with(tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "example_print_request_response=debug,tower_http=debug".into()))
-        .with(tracing_subscriber::fmt::layer())
-        .init();
+fn setup_tracing() {
+    let filter_layer = EnvFilter::try_from_default_env()
+        .or_else(|_| EnvFilter::try_new("info"))
+        .unwrap();
+    let fmt_layer = fmt::layer().json().with_target(false);
 
-    // CORS
+    tracing_subscriber::registry().with(filter_layer).with(fmt_layer).init();
+}
+
+pub(crate) fn make_app(max_body_size: usize) -> Router<AppState> {
     let cors = CorsLayer::new()
         .allow_methods(vec![Method::GET, Method::POST, Method::PUT, Method::DELETE])
         .allow_origin(Any)
         .allow_headers(Any);
 
-    let svc = Router::new()
-        .route("/", get(root))
-        .fallback(shared::handler_404)
-        .layer(middleware::from_fn(shared::print_request_response))
+    Router::new()
+        .layer(
+            ServiceBuilder::new()
+                .layer(DefaultBodyLimit::max(max_body_size))
+                .layer(DefaultBodyLimit::disable())
+                .layer(CompressionLayer::new())
+                .layer(TraceLayer::new_for_http()), // .layer(TimeoutLayer::new(env::HTTP_TIMEOUT)),
+        )
         .layer(cors)
-        .layer(AddExtensionLayer::new(Arc::new(state)));
+        .fallback(shared::handle_404_json)
+}
 
-    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+async fn start() -> Result<(), Box<dyn std::error::Error>> {
+    setup_logging();
+    setup_tracing();
 
-    info!("http server is running"; "bind_addr" => addr);
-    axum::Server::bind(&addr)
-        .serve(svc.into_make_service())
+    let addr = env::addr()?;
+    let max_body_size = env::max_body_size()?;
+
+    let state = state::AppState {};
+    let service: Router<()> = make_app(max_body_size).with_state(state);
+
+    tracing::info!("serving on {addr}");
+    tracing::info!("restricting maximum body size to {max_body_size} bytes");
+
+    Server::bind(&addr)
+        .serve(service.into_make_service())
         .with_graceful_shutdown(shared::shutdown_signal())
-        .await
-        .unwrap();
+        .await?;
+
+    Ok(())
+}
+
+#[tokio::main]
+async fn main() -> ExitCode {
+    match start().await {
+        Ok(_) => ExitCode::SUCCESS,
+        Err(err) => {
+            eprintln!("Error: {err}");
+            ExitCode::FAILURE
+        }
+    }
 }
 
 async fn root() -> &'static str {
