@@ -8,10 +8,3 @@ authors = [
 ]
 
 [dependencies]
-diesel = { version = "2.0.3", features = ["r2d2", "postgres", "chrono", "time", "uuid", "serde_json", "extras"] }
-dotenvy = "0.15.6"
-envconfig = "0.10.0"
-lazy_static = "1.4.0"
-serde = { version = "1.0.154", features = ["derive"] }
-thiserror = "1.0.39"
-tracing-subscriber = { version = "0.3.16", features = ["json"] }
