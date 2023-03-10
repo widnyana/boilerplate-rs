@@ -4,37 +4,18 @@ use axum::{
     http::{Request, StatusCode},
     middleware::Next,
     response::{IntoResponse, Response},
-    Json,
 };
-
 use serde::Serialize;
 
-#[derive(Clone)]
-pub struct State {}
-
 #[derive(Serialize)]
-pub struct ErrorResponse {
-    error: bool,
-    message: String,
+pub struct PlainResponse {
+    pub error: bool,
+    pub message: String,
 }
 
 pub async fn shutdown_signal() {
     tokio::signal::ctrl_c().await.expect("Expect shutdown signal handler");
     println!("signal shutdown");
-}
-
-// default response when 404 occured
-pub async fn handler_404() -> impl IntoResponse {
-    (StatusCode::NOT_FOUND, "nothing to see here")
-}
-
-pub async fn handle_404_json() -> impl IntoResponse {
-    let err = ErrorResponse {
-        error: true,
-        message: "not found".to_string(),
-    };
-
-    (StatusCode::NOT_FOUND, Json(err))
 }
 
 pub async fn buffer_and_print<B>(direction: &str, body: B) -> Result<Bytes, (StatusCode, String)>

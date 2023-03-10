@@ -1,7 +1,8 @@
-#[macro_use]
-extern crate diesel;
-#[macro_use]
-extern crate diesel_migrations;
+#![forbid(unsafe_code)]
 
-pub mod database;
+// #[macro_use]
+// extern crate anyhow;
+
+/// Config utilities based on config-rs
+pub mod config;
 pub mod env;

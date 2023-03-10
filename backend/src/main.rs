@@ -1,26 +1,28 @@
 #![forbid(unsafe_code)]
 #![allow(clippy::new_without_default)]
 #![deny(rust_2018_idioms)]
+#![allow(dead_code)]
 // #![allow(unused_imports,missing_docs,unused_variables, dead_code, unused_macros)]
-// #![deny(unsafe_code)]
 
 use std::process::ExitCode;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
-use axum::extract::DefaultBodyLimit;
-use axum::http::Method;
-use axum::{Router, Server};
+use axum::{extract::Extension, http::Method, routing::get, Router, Server};
 use slog::{o, Drain};
-use tower::ServiceBuilder;
-use tower_http::compression::CompressionLayer;
-use tower_http::cors::{Any, CorsLayer};
-use tower_http::trace::TraceLayer;
+use tower_http::{
+    compression::CompressionLayer,
+    cors::{Any, CorsLayer},
+    decompression::RequestDecompressionLayer,
+    trace::{self, TraceLayer},
+};
 use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
-use infrastructure::env;
+use infrastructure::config::{get_config, Config};
 
-use crate::state::AppState;
+use crate::routes::{handle_404_json, health_handler};
+use crate::state::AppContext;
 
+mod routes;
 mod shared;
 mod state;
 
@@ -35,44 +37,50 @@ fn setup_logging() {
 }
 
 fn setup_tracing() {
-    let filter_layer = EnvFilter::try_from_default_env()
-        .or_else(|_| EnvFilter::try_new("info"))
-        .unwrap();
-    let fmt_layer = fmt::layer().json().with_target(false);
+    let filter_layer = EnvFilter::new(std::env::var("RUST_LOG").unwrap_or_else(|_| "info".into()));
+    let fmt_layer = fmt::layer().json().with_line_number(true).with_thread_names(false);
 
     tracing_subscriber::registry().with(filter_layer).with(fmt_layer).init();
 }
 
-pub(crate) fn make_app(max_body_size: usize) -> Router<AppState> {
+pub(crate) fn make_app(ctx: Arc<AppContext>) -> Router {
+    let mut tracing_level = tracing::Level::ERROR;
+    if ctx.config.run_mode.to_lowercase() != "production" {
+        tracing_level = tracing::Level::INFO;
+    }
+
     let cors = CorsLayer::new()
         .allow_methods(vec![Method::GET, Method::POST, Method::PUT, Method::DELETE])
         .allow_origin(Any)
         .allow_headers(Any);
 
     Router::new()
+        .route("/health", get(health_handler))
         .layer(
-            ServiceBuilder::new()
-                .layer(DefaultBodyLimit::max(max_body_size))
-                .layer(DefaultBodyLimit::disable())
-                .layer(CompressionLayer::new())
-                .layer(TraceLayer::new_for_http()), // .layer(TimeoutLayer::new(env::HTTP_TIMEOUT)),
+            TraceLayer::new_for_http()
+                .make_span_with(trace::DefaultMakeSpan::new().level(tracing_level))
+                .on_response(trace::DefaultOnResponse::new().level(tracing_level))
+                .on_failure(trace::DefaultOnFailure::new().level(tracing_level)),
         )
+        .layer(CompressionLayer::new())
+        .layer(Extension(ctx))
         .layer(cors)
-        .fallback(shared::handle_404_json)
+        .layer(Extension(RequestDecompressionLayer::new()))
+        .fallback(handle_404_json)
 }
 
-async fn start() -> Result<(), Box<dyn std::error::Error>> {
+async fn start(config: &'static Config) -> Result<(), Box<dyn std::error::Error>> {
     setup_logging();
     setup_tracing();
 
-    let addr = env::addr()?;
-    let max_body_size = env::max_body_size()?;
+    let addr = &format!("0.0.0.0:{}", config.port)
+        .parse()
+        .expect("Unable to parse bind address");
 
-    let state = state::AppState {};
-    let service: Router<()> = make_app(max_body_size).with_state(state);
+    let ctx: Arc<AppContext> = Arc::new(AppContext::init(config).await?);
+    let service: Router<()> = make_app(ctx);
 
     tracing::info!("serving on {addr}");
-    tracing::info!("restricting maximum body size to {max_body_size} bytes");
 
     Server::bind(&addr)
         .serve(service.into_make_service())
@@ -84,7 +92,9 @@ async fn start() -> Result<(), Box<dyn std::error::Error>> {
 
 #[tokio::main]
 async fn main() -> ExitCode {
-    match start().await {
+    let config = get_config();
+
+    match start(config).await {
         Ok(_) => ExitCode::SUCCESS,
         Err(err) => {
             eprintln!("Error: {err}");
