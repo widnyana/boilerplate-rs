@@ -5,4 +5,5 @@
 
 /// Config utilities based on config-rs
 pub mod config;
+pub mod db;
 pub mod env;

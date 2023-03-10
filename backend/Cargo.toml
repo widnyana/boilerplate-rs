@@ -20,7 +20,7 @@ hyper = "0.14.24"
 tokio = { version = "1.26.0", features = ["full"] }
 tower-http = { version = "0.4.0", features = ["cors", "fs", "compression-gzip", "metrics", "tower", "trace", "add-extension", "auth", "base64", "full"] }
 tracing = { workspace = true, features = ["release_max_level_info", "log-always", "async-await", "valuable"] }
-tracing-subscriber = { version = "0.3.16", features = ["env-filter", "serde_json", "time"] }
+tracing-subscriber = { version = "0.3.16", features = ["env-filter", "serde_json", "time", "json"] }
 serde = { workspace = true, features = ["derive"] }
 sea-orm = { version = "0.11.0", features = ["macros", "mock", "runtime-tokio-rustls", "sqlx-postgres", "chrono", "with-json", "postgres-array", "sqlx"] }
 anyhow = "1.0.69"

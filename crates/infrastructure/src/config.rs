@@ -15,14 +15,20 @@ static CONFIG: Lazy<Config> = Lazy::new(|| Config::new().expect("unable to retri
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct DbPool {
     /// Database pool min
-    pub min: Option<i16>,
+    pub min: Option<u32>,
     /// Database pool max
-    pub max: Option<i16>,
+    pub max: Option<u32>,
+
+    /// timeout when performing connect
+    pub connect_timeout: Option<u64>,
+
+    /// timeout for idle connection (in second)
+    pub idle_timeout: Option<u64>,
 }
 
 /// Database config
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Database {
+pub struct DatabaseConfig {
     /// Database name
     pub name: String,
     /// Full database url
@@ -50,7 +56,7 @@ pub struct Config {
     pub port: u16,
 
     /// database connection configuration
-    pub database: Database,
+    pub database: DatabaseConfig,
 
     /// logging configuration
     pub log: LogConfig,

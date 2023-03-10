@@ -3,8 +3,10 @@ name = "common"
 version = "0.1.0"
 edition = "2021"
 publish = false
-authors = [
-    "Widnyana Putra <wid@widnyana.web.id>"
-]
+authors = ["Widnyana Putra <wid@widnyana.web.id>"]
 
 [dependencies]
+infrastructure = { path = "../infrastructure" }
+tokio = { workspace = true, features = ["parking_lot"] }
+sea-orm = { workspace = true, default-features = false, features = ["macros", "runtime-tokio-rustls", "with-chrono"] }
+tracing.workspace = true

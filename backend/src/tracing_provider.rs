@@ -19,11 +19,11 @@ use infrastructure::config::LogConfig;
 #[instrument]
 pub fn get_log_level(lvl: &String) -> Level {
     match lvl.as_str() {
-        "TRACE" => tracing::Level::TRACE,
-        "DEBUG" => tracing::Level::DEBUG,
-        "WARN" => tracing::Level::WARN,
-        "ERROR" => tracing::Level::ERROR,
-        _ => tracing::Level::INFO,
+        "TRACE" => Level::TRACE,
+        "DEBUG" => Level::DEBUG,
+        "WARN" => Level::WARN,
+        "ERROR" => Level::ERROR,
+        _ => Level::INFO,
     }
 }
 
@@ -52,7 +52,7 @@ pub fn setup_tracing_v2(conf: &LogConfig) {
 #[instrument]
 pub fn provide_trace_layer() -> TraceLayer<SharedClassifier<ServerErrorsAsFailures>> {
     // used for dumping log as this level on each events configured in `TraceLayer`
-    let tracing_level = tracing::Level::INFO;
+    let tracing_level = Level::INFO;
 
     TraceLayer::new_for_http()
         .make_span_with(trace::DefaultMakeSpan::new().level(tracing_level))

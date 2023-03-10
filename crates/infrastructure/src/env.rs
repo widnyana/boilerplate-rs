@@ -1,3 +1,5 @@
+#![allow(clippy::all)]
+
 use std::net::SocketAddr;
 use std::num::ParseIntError;
 use std::string::String;
@@ -35,7 +37,7 @@ pub fn addr() -> Result<SocketAddr, Error> {
         .map(String::as_str)
         .unwrap_or("0.0.0.0:3000")
         .parse()
-        .map_err(|_| Error::AddressPort)
+        .map_err(|_e| Error::AddressPort)
 }
 
 pub fn max_body_size() -> Result<usize, Error> {
