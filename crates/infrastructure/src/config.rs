@@ -73,7 +73,11 @@ impl Config {
                 // Support the nested structure of the config manually
                 Env::raw()
                     // Split the Database variables
-                    .map(|key| key.as_str().replace("DATABASE_POOL_", "DATABASE.POOL.").into())
+                    .map(|key| {
+                        key.as_str()
+                            .replace("DATABASE_POOL_", "DATABASE.POOL.")
+                            .into()
+                    })
                     .map(|key| key.as_str().replace("DATABASE_", "DATABASE.").into())
                     // Split the Redis variables
                     .map(|key| key.as_str().replace("REDIS_", "REDIS.").into())
