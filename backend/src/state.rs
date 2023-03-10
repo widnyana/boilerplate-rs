@@ -6,6 +6,7 @@ use sea_orm::DatabaseConnection;
 use std::sync::Arc;
 
 /// Dependencies needed by the resolvers
+#[derive(Debug, Clone)]
 pub struct AppContext {
     /// application config instance
     pub config: &'static Config,

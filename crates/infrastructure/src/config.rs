@@ -33,6 +33,13 @@ pub struct Database {
     pub pool: DbPool,
 }
 
+/// Logging a.k.a Tracing config
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct LogConfig {
+    pub level: String,
+    pub format: String,
+}
+
 /// Application config
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Config {
@@ -44,6 +51,9 @@ pub struct Config {
 
     /// database connection configuration
     pub database: Database,
+
+    /// logging configuration
+    pub log: LogConfig,
 }
 
 impl Config {

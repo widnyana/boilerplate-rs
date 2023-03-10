@@ -1,6 +1,5 @@
 [workspace]
-members = [
-	"backend",
+members = ["backend",
 	"crates/common",
 	"crates/infrastructure",
 	"crates/logger"
@@ -8,7 +7,6 @@ members = [
 
 [workspace.dependencies]
 axum = "0.6.10"
-tower-http = { version = "0.4.0", features = ["cors", "fs", "compression-gzip"] }
 
 
 [workspace.package]
@@ -25,4 +23,15 @@ debug = false
 lto = true
 opt-level = "z"
 panic = 'abort'
-strip = "true"
+strip = true
+
+[profile.dev]
+opt-level = 0
+debug = true
+debug-assertions = true
+overflow-checks = true
+lto = false
+panic = 'unwind'
+incremental = true
+codegen-units = 256
+rpath = false

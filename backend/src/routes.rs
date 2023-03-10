@@ -1,10 +1,14 @@
+mod users;
+
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::Json;
+use tracing::{debug, error, info, instrument, trace, warn};
 
 use crate::shared::PlainResponse;
 
 /// Handle health check requests
+#[instrument]
 pub async fn health_handler() -> impl IntoResponse {
     let err = PlainResponse {
         error: false,
@@ -15,7 +19,14 @@ pub async fn health_handler() -> impl IntoResponse {
 }
 
 /// default response when 404 occured - as json
+#[instrument]
 pub async fn handle_404_json() -> impl IntoResponse {
+    trace!("got hit on handle_404_json");
+    debug!("got hit on handle_404_json");
+    info!("got hit on handle_404_json");
+    warn!("got hit on handle_404_json");
+    error!("got hit on handle_404_json");
+
     let err = PlainResponse {
         error: true,
         message: "not found".to_string(),
@@ -27,4 +38,15 @@ pub async fn handle_404_json() -> impl IntoResponse {
 /// default response when 404 occured -  as plain text
 pub async fn handler_404() -> impl IntoResponse {
     (StatusCode::NOT_FOUND, "nothing to see here")
+}
+
+/// old plain hello world
+#[instrument]
+pub async fn root_handler() -> impl IntoResponse {
+    let idx = PlainResponse {
+        error: false,
+        message: "sup!".to_string(),
+    };
+
+    (StatusCode::IM_A_TEAPOT, Json(idx))
 }
