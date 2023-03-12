@@ -1,14 +1,11 @@
 [workspace]
-members = ["backend",
-	"crates/common",
-	"crates/infrastructure",
-	"crates/logger"]
+members = ["backend", "crates/common", "crates/infrastructure", "crates/logger"]
 exclude = [".cargo", "sontekan", "unused"]
 
 
 [workspace.dependencies]
 axum = "0.6.10"
-sea-orm =  "0.11.0"
+sea-orm = "0.11.0"
 tracing = "0.1.37"
 serde = "1.0.154"
 tokio = "1.26.0"
@@ -18,8 +15,10 @@ tokio = "1.26.0"
 version = "0.1.0"
 edition = "2021"
 publish = false
-repository = "https://github.com/widnyana/env-compare"
+repository = "https://github.com/widnyana/boilerplate-rs"
 authors = ["Widnyana Putra <wid@widnyana.web.id>"]
+homepage = "https://github.com/widnyana/boilerplate-rs"
+keywords = ["axum", "rest", "api", "boilerplate"]
 
 
 [profile.release]
@@ -28,7 +27,7 @@ debug = false
 lto = "fat"
 opt-level = "z"
 panic = 'abort'
-strip = true
+strip = "true"
 
 [profile.dev]
 opt-level = 0

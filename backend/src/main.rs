@@ -8,6 +8,12 @@ use std::process::ExitCode;
 use std::sync::Arc;
 
 use axum::{extract::Extension, http::Method, routing::get, Router, Server};
+use tower_http::{
+    compression::CompressionLayer,
+    cors::{Any, CorsLayer},
+};
+use tracing::{info, instrument};
+
 use backend::{
     routes::{handle_404_json, health_handler, root_handler},
     shared::shutdown_signal,
@@ -15,11 +21,6 @@ use backend::{
     tracing_provider::{provide_trace_layer, setup_tracing_v2},
 };
 use infrastructure::config::{get_config, Config};
-use tower_http::{
-    compression::CompressionLayer,
-    cors::{Any, CorsLayer},
-};
-use tracing::{info, instrument};
 
 #[instrument]
 pub(crate) fn make_app(ctx: Arc<AppContext>) -> Router {
