@@ -4,7 +4,7 @@ port: 3000
 
 database:
   name: "env-compare"
-  url: "postgresql://env-compare:password@localhost:5432/env-compare"
+  dsn: "postgresql://env-compare:password@localhost:5432/env-compare"
   debug: true
   pool:
     min: 5
