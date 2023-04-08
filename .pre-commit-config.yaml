@@ -16,5 +16,22 @@ repos:
     - repo: https://github.com/doublify/pre-commit-rust
       rev: v1.0
       hooks:
-          - id: fmt
           - id: cargo-check
+
+    - repo: local
+      hooks:
+        - id: clippy
+          name: cargo clippy
+          description: Run the Clippy linter on the package.
+          entry: cargo clippy
+          args: [ "--all-features", "--tests", "--" ]
+          language: system
+          types: [ rust ]
+          pass_filenames: false
+        - id: fmt
+          name: cargo fmt (nightly)
+          description: Format files with cargo fmt.
+          entry: cargo +nightly fmt
+          language: system
+          types: [rust]
+          args: ["--"]

@@ -1,15 +1,18 @@
 [workspace]
-members = ["backend", "crates/common", "crates/infrastructure", "crates/logger"]
+members = ["backend", "crates/common", "crates/infrastructure"]
 exclude = [".cargo", "sontekan", "unused"]
 
 
 [workspace.dependencies]
 axum = "0.6.10"
 sea-orm = "0.11.0"
-tracing = "0.1.37"
-serde = "1.0.154"
-tokio = "1.26.0"
-
+lazy_static = { version = "1.4" }
+serde = { version = "1.0.154", features = ["derive"] }
+tokio = { version = "1", features = ["full"] }
+regex = "1.7.3"
+tower-http = "0.4.0"
+log = { version = "0.4" }
+tracing = "0.1.35"
 
 [workspace.package]
 version = "0.1.0"

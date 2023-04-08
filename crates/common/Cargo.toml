@@ -14,3 +14,9 @@ sea-orm = { workspace = true, default-features = false, features = [
     "with-chrono",
 ] }
 tracing.workspace = true
+serde.workspace = true
+lazy_static.workspace = true
+regex.workspace = true
+hex = "0.4.3"
+base64 = "0.21.0"
+url = "2.3.1"

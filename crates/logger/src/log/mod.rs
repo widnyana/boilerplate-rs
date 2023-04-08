@@ -1,7 +1,8 @@
+use std::sync::Arc;
+
 use arc_swap::{ArcSwap, Guard};
 use lazy_static::lazy_static;
 use slog::{o, Logger};
-use std::sync::Arc;
 
 #[cfg(feature = "log")]
 mod redirect;
@@ -11,34 +12,35 @@ pub use self::redirect::*;
 
 // create a logger that discard everything
 fn discard_logger() -> Logger {
-    Logger::root(slog::Discard, o!())
+	Logger::root(slog::Discard, o!())
 }
 
 lazy_static! {
-    static ref SLOG_GLOBAL_LOGGER: ArcSwap<Logger> = ArcSwap::from(Arc::new(discard_logger()));
+	static ref SLOG_GLOBAL_LOGGER: ArcSwap<Logger> = ArcSwap::from(Arc::new(discard_logger()));
 }
 
 // replace global logger with `l`
 pub fn set_global(l: slog::Logger) {
-    SLOG_GLOBAL_LOGGER.store(Arc::new(l));
+	SLOG_GLOBAL_LOGGER.store(Arc::new(l));
 }
 
 /// Gets the global `Logger`.
 ///
-/// If you only want to access the global logger temporarily (i.e. as a local variable on stack but
-/// not structures), use `borrow_global()` which is more efficient.
+/// If you only want to access the global logger temporarily (i.e. as a local
+/// variable on stack but not structures), use `borrow_global()` which is more
+/// efficient.
 pub fn get_global() -> Arc<Logger> {
-    SLOG_GLOBAL_LOGGER.load_full()
+	SLOG_GLOBAL_LOGGER.load_full()
 }
 
 /// Temporary borrows the global `Logger`.
 pub fn borrow_global() -> Guard<Arc<Logger>> {
-    SLOG_GLOBAL_LOGGER.load()
+	SLOG_GLOBAL_LOGGER.load()
 }
 
 /// Clears the global `Logger` and discard future logging.
 pub fn clear_global() {
-    SLOG_GLOBAL_LOGGER.store(Arc::new(discard_logger()));
+	SLOG_GLOBAL_LOGGER.store(Arc::new(discard_logger()));
 }
 
 /// Logs a critical level message using the global logger.
