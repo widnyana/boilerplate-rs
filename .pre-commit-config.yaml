@@ -23,8 +23,7 @@ repos:
         - id: clippy
           name: cargo clippy
           description: Run the Clippy linter on the package.
-          entry: cargo clippy
-          args: [ "--all-features", "--tests", "--" ]
+          entry: make lint
           language: system
           types: [ rust ]
           pass_filenames: false
