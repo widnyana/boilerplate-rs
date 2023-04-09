@@ -2,9 +2,9 @@
 
 use std::sync::Arc;
 
-use aide::axum::ApiRouter;
-use axum::{http::StatusCode, routing::get, Extension, Json};
-use infrastructure::context::AppContext;
+use aide::axum::{routing::get, ApiRouter};
+use axum::{http::StatusCode, Extension, Json};
+use infrastructure::{context::AppContext, openapi::openapi_tag};
 use sea_orm::{ConnectionTrait, DatabaseBackend, Statement};
 use serde::{Deserialize, Serialize};
 
@@ -71,7 +71,9 @@ async fn ping() -> StatusCode {
 }
 
 pub fn router() -> ApiRouter {
+	let tag = openapi_tag("Utility");
+
 	ApiRouter::new()
-		.route("/health", get(healthcheck).head(healthcheck))
-		.route("/health/ping", get(ping).head(ping))
+		.api_route_with("/health", get(healthcheck).head(healthcheck), &tag)
+		.api_route_with("/health/ping", get(ping).head(ping), &tag)
 }

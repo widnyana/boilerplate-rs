@@ -63,10 +63,10 @@ pub struct Tracing {
 /// Application config
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Config {
-	// application run mode, production or development
+	/// application run mode, production or development
 	pub run_mode: String,
 
-	// port to bind
+	/// port to bind
 	pub port: u16,
 
 	/// database connection configuration
@@ -75,6 +75,7 @@ pub struct Config {
 	/// logging configuration
 	pub log: LogConfig,
 
+	/// tracing configuration
 	pub tracing: Tracing,
 }
 
@@ -84,26 +85,17 @@ impl Config {
 		let run_mode = env::var("RUN_MODE").unwrap_or_else(|_| "development".to_string());
 
 		let config = Figment::new()
-			// load default
 			.merge(Yaml::file("config/default.yaml"))
-			// Load local overrides
 			.merge(Yaml::file("config/local.yaml"))
-			// Load run mode overrides
 			.merge(Yaml::file(format!("config/{}.toml", run_mode)))
-			// Load environment variables
 			.merge(
-				// Support the nested structure of the config manually
 				Env::raw()
-					// Split the Database variables
 					.map(|key| key.as_str().replace("DATABASE_POOL_", "DATABASE.POOL.").into())
 					.map(|key| key.as_str().replace("DATABASE_", "DATABASE.").into())
-					// Split the Redis variables
 					.map(|key| key.as_str().replace("REDIS_", "REDIS.").into())
-					// Split the Auth variables
 					.map(|key| key.as_str().replace("AUTH_CLIENT_", "AUTH.CLIENT.").into())
 					.map(|key| key.as_str().replace("AUTH_", "AUTH.").into()),
 			)
-			// Serialize and freeze
 			.extract()?;
 
 		Ok(config)

@@ -18,10 +18,10 @@ path = "src/main.rs"
 infrastructure = { path = "../crates/infrastructure" }
 
 ### HTTP
-axum = { workspace = true}
+axum = { workspace = true }
 hyper = "0.14.24"
 tokio = { workspace = true }
-tower-http = {workspace = true}
+tower-http = { workspace = true }
 
 ### Tracing
 tracing = { workspace = true, features = ["release_max_level_info",
@@ -46,7 +46,10 @@ sea-orm = { workspace = true, features = ["macros",
 
 ### Serialization
 serde = { workspace = true, features = ["derive"] }
+schemars = { workspace = true }
 
 ### Utils
 aide = { workspace = true }
 anyhow = "1.0.69"
+axum-macros = "0.3.7"
+axum-jsonschema = { workspace = true }

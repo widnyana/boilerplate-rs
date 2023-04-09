@@ -14,6 +14,7 @@ use axum::{
 	Json,
 	TypedHeader,
 };
+use axum_jsonschema::JsonSchemaRejection;
 use http::StatusCode;
 use schemars::{JsonSchema, _serde_json::json};
 use sea_orm::{DbErr, TransactionError};
@@ -24,9 +25,9 @@ use serde_json;
 /// [Error].
 pub type Result<T> = std::result::Result<T, Error>;
 
-/// ================================================================================================
+/// =============================================================================================
 /// Generic Error
-/// ================================================================================================
+/// =============================================================================================
 
 #[derive(Debug, Clone)]
 pub enum ErrorType {
@@ -56,6 +57,13 @@ pub struct Error {
 
 /// implementation for [`Error`]
 impl Error {
+	pub fn new(s: impl fmt::Display, location: &'static str) -> Self {
+		Self {
+			trace: Self::init_trace(location),
+			typ: ErrorType::Generic(s.to_string()),
+		}
+	}
+
 	pub fn generic(s: impl fmt::Display, location: &'static str) -> Self {
 		Self {
 			trace: Self::init_trace(location),
@@ -273,6 +281,16 @@ impl fmt::Display for HttpError {
 					serde_json::to_string(&detail).unwrap_or_else(|e| format!("\"unserializable error for {e}\""))
 				)
 			}
+		}
+	}
+}
+
+impl From<JsonSchemaRejection> for HttpError {
+	fn from(rejection: JsonSchemaRejection) -> Self {
+		match rejection {
+			JsonSchemaRejection::Json(j) => Self::internal_server_error(None, Option::from(j.to_string())),
+			JsonSchemaRejection::Serde(_) => Self::bad_request(None, Option::from("invalid request".to_string())),
+			JsonSchemaRejection::Schema(_s) => Self::bad_request(None, Option::from("invalid request".to_string())),
 		}
 	}
 }

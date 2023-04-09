@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 axum = { workspace = true }
+axum-jsonschema = { workspace = true }
 http = "0.2.9"
 tower-http = { workspace = true}
 tokio = { workspace = true }

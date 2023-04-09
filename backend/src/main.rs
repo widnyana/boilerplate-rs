@@ -7,7 +7,11 @@ use std::{process::ExitCode, sync::Arc};
 
 use aide::axum::ApiRouter;
 use axum::{extract::Extension, http::Method, routing::get, Server};
-use backend::routes;
+use backend::{
+	openapi,
+	openapi::{api_docs, docs_routes},
+	routes,
+};
 use infrastructure::{
 	config::{get_config, Config},
 	context::AppContext,
@@ -23,6 +27,11 @@ use tracing::instrument;
 
 #[instrument(skip(ctx))]
 pub fn make_app(ctx: Arc<AppContext>) -> ApiRouter {
+	// OpenAPI/aide must be initialized before any routers are constructed
+	// because its initialization sets generation-global settings which are
+	// needed at router-construction time.
+	let mut openapi = openapi::initialize_openapi();
+
 	let cors = CorsLayer::new()
 		.allow_methods(vec![Method::GET, Method::POST, Method::PUT, Method::DELETE])
 		.allow_origin(Any)
@@ -31,15 +40,22 @@ pub fn make_app(ctx: Arc<AppContext>) -> ApiRouter {
 	// initialize routes
 	let general_router = routes::general_router();
 
-	ApiRouter::new()
+	let app = ApiRouter::new()
 		.nest_api_service("/general", general_router)
+		.nest_api_service("/docs", docs_routes(ctx.clone()))
 		.route("/", get(root_handler))
 		.route("/health", get(health_handler))
-		.fallback(handle_404_json)
+		.finish_api_with(&mut openapi, api_docs)
+		.fallback(handle_404_json);
+
+	let app = app
 		.layer(CompressionLayer::new())
+		.layer(Extension(Arc::new(openapi)))
 		.layer(Extension(ctx))
 		.layer(cors)
-		.layer(provide_trace_layer())
+		.layer(provide_trace_layer());
+
+	app.into()
 }
 
 #[instrument(skip(config))]
@@ -50,10 +66,7 @@ async fn start(config: &'static Config) -> Result<(), Box<dyn std::error::Error>
 	let service: ApiRouter<()> = make_app(ctx);
 
 	tracing::info!("serving on {addr}");
-	Server::bind(addr)
-		.serve(service.into_make_service())
-		.with_graceful_shutdown(graceful_shutdown_handler())
-		.await?;
+	Server::bind(addr).serve(service.into_make_service()).with_graceful_shutdown(graceful_shutdown_handler()).await?;
 
 	Ok(())
 }

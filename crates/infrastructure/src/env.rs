@@ -38,7 +38,5 @@ pub fn addr() -> Result<SocketAddr, Error> {
 }
 
 pub fn max_body_size() -> Result<usize, Error> {
-	std::env::var(VAR_MAX_BODY_SIZE)
-		.map_or_else(|_| Ok(1024 * 1024), |s| s.parse::<usize>())
-		.map_err(Error::MaxBodySize)
+	std::env::var(VAR_MAX_BODY_SIZE).map_or_else(|_| Ok(1024 * 1024), |s| s.parse::<usize>()).map_err(Error::MaxBodySize)
 }

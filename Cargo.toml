@@ -5,6 +5,7 @@ exclude = [".cargo", "unused"]
 
 [workspace.dependencies]
 axum = { version = "0.6.10", features = ["headers"]}
+axum-jsonschema = { version="0.5.0", features=["aide"] }
 tokio = { version = "1.26.0", features = ["full"] }
 tower-http = { version = "0.4.0", features = ["cors",
 	"fs",
