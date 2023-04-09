@@ -19,9 +19,10 @@ pub struct AppContext {
 impl AppContext {
 	/// Create a new set of dependencies based on the given shared resources
 	pub async fn init(config: &'static Config) -> Result<Self> {
+		tracing::debug!("DB: opening connection");
 		let dbconn = rdbms::open(&config.database).await;
-
 		let db = Arc::new(dbconn);
+		tracing::debug!("DB: Started");
 
 		Ok(Self { config, db })
 	}

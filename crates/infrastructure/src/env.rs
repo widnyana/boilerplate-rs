@@ -29,9 +29,16 @@ pub enum Error {
 }
 
 pub fn addr() -> Result<SocketAddr, Error> {
-	std::env::var(VAR_ADDRESS_PORT).as_ref().map(String::as_str).unwrap_or("0.0.0.0:3000").parse().map_err(|_e| Error::AddressPort)
+	std::env::var(VAR_ADDRESS_PORT)
+		.as_ref()
+		.map(String::as_str)
+		.unwrap_or("0.0.0.0:3000")
+		.parse()
+		.map_err(|_e| Error::AddressPort)
 }
 
 pub fn max_body_size() -> Result<usize, Error> {
-	std::env::var(VAR_MAX_BODY_SIZE).map_or_else(|_| Ok(1024 * 1024), |s| s.parse::<usize>()).map_err(Error::MaxBodySize)
+	std::env::var(VAR_MAX_BODY_SIZE)
+		.map_or_else(|_| Ok(1024 * 1024), |s| s.parse::<usize>())
+		.map_err(Error::MaxBodySize)
 }

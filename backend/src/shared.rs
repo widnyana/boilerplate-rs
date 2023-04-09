@@ -14,12 +14,6 @@ pub struct PlainResponse {
 	pub message: String,
 }
 
-#[instrument]
-pub async fn shutdown_signal() {
-	tokio::signal::ctrl_c().await.expect("Expect shutdown signal handler");
-	println!("signal shutdown");
-}
-
 pub async fn buffer_and_print<B>(direction: &str, body: B) -> Result<Bytes, (StatusCode, String)>
 where
 	B: axum::body::HttpBody<Data = Bytes>,

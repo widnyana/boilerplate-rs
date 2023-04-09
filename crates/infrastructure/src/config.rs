@@ -47,14 +47,19 @@ pub struct LogConfig {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Otel {
+pub struct Tracing {
 	/// The OpenTelemetry address to send events to if given.
-	pub address: Option<String>,
+	pub otel_address: Option<String>,
 	/// The ratio at which to sample spans when sending to OpenTelemetry. When
 	/// not given it defaults to always sending. If the OpenTelemetry address is
 	/// not set, this will do nothing.
-	pub sample_ratio: Option<f64>,
+	pub otel_sample_ratio: Option<f64>,
+
+	/// Whether to enable the logging of the databases at the configured log
+	/// level. This may be useful for analyzing their response times.
+	pub db_tracing: bool,
 }
+
 /// Application config
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Config {
@@ -70,7 +75,7 @@ pub struct Config {
 	/// logging configuration
 	pub log: LogConfig,
 
-	pub otel: Otel,
+	pub tracing: Tracing,
 }
 
 impl Config {

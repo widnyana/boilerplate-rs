@@ -1,18 +1,56 @@
 [workspace]
 members = ["backend", "crates/common", "crates/infrastructure"]
-exclude = [".cargo", "sontekan", "unused"]
+exclude = [".cargo", "unused"]
 
 
 [workspace.dependencies]
-axum = "0.6.10"
-sea-orm = "0.11.0"
-lazy_static = { version = "1.4" }
-serde = { version = "1.0.154", features = ["derive"] }
-tokio = { version = "1", features = ["full"] }
-regex = "1.7.3"
-tower-http = "0.4.0"
+axum = { version = "0.6.10", features = ["headers"]}
+tokio = { version = "1.26.0", features = ["full"] }
+tower-http = { version = "0.4.0", features = ["cors",
+	"fs",
+	"compression-gzip",
+	"metrics",
+	"tower",
+	"trace",
+	"add-extension",
+	"auth",
+	"base64",
+	"full",
+] }
+
+### Database
+sqlx = { version = "0.6.2", features = [ "runtime-tokio-rustls", "postgres", "migrate" ] }
+sea-orm = { version = "0.11.0", features = ["macros",
+	"mock",
+	"runtime-tokio-rustls",
+	"sqlx-postgres",
+	"chrono",
+	"with-json",
+	"postgres-array",
+	"sqlx",
+]}
+
+
+### Tracing
 log = { version = "0.4" }
-tracing = "0.1.35"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+### OpenTelemetry
+# opentelemetry = { version = "0.19.0", features = ["rt-tokio", "trace"], default_features = false }
+# opentelemetry-http = "0.8.0"
+# opentelemetry-otlp = { version = "0.12.0" }
+# tracing-opentelemetry = "0.18"
+
+### Serialization
+schemars = {version="0.8.12", features=["chrono", "url"]}
+serde = { version = "1.0.154", features = ["derive"] }
+serde_json = { version = "1.0.74", features = ["arbitrary_precision", "raw_value"] }
+
+### Utils
+aide = { version = "0.10.0", features = ["axum", "redoc", "macros"] }
+lazy_static = { version = "1.4" }
+regex = "1.7.3"
+
 
 [workspace.package]
 version = "0.1.0"

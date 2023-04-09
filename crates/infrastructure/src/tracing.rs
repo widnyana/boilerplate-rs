@@ -5,9 +5,10 @@ use tower_http::{
 };
 use tracing::{instrument, log::debug, Level};
 
-use crate::config::LogConfig;
+use crate::config::Config;
 
-pub mod core_spans;
+pub mod otel;
+pub mod otel_spans;
 
 /// convert `&String` into `tracing::Level`
 #[instrument]
@@ -22,12 +23,19 @@ pub fn get_log_level(lvl: &String) -> Level {
 }
 
 /// setup logging using tracing
-#[instrument]
-pub fn setup_tracing(conf: &LogConfig) {
-	let mut builder = tracing_subscriber::fmt().with_ansi(false).with_file(true).with_level(true).with_line_number(true).with_target(true).json();
+#[instrument(skip(conf))]
+pub fn setup_tracing(conf: &Config) {
+	let mut builder = tracing_subscriber::fmt()
+		.log_internal_errors(false)
+		.with_ansi(false)
+		.with_file(true)
+		.with_level(true)
+		.with_line_number(true)
+		.with_target(true)
+		.json();
 
-	if !conf.level.is_empty() {
-		let log_env = get_log_level(&conf.level);
+	if !conf.log.level.is_empty() {
+		let log_env = get_log_level(&conf.log.level);
 		debug!("log env: {}", log_env);
 		builder = builder.with_max_level(log_env);
 	}

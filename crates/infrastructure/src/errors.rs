@@ -1,129 +1,341 @@
+// mostly stolen from svix-webhooks/server/svix-server/src/error.rs
+
 use std::{
-	convert::Infallible,
-	fmt::{Display, Formatter},
-	num::{ParseIntError, TryFromIntError},
-	str::Utf8Error,
-	string::FromUtf8Error,
-	sync::{PoisonError, RwLockReadGuard, RwLockWriteGuard},
+	error,
+	fmt,
+	fmt::{Debug, Formatter},
 };
 
-use base64;
-use hex::FromHexError;
-use serde::{Deserialize, Serialize};
-use tracing::log::warn;
-use url::ParseError as URLParseError;
+use aide::OperationOutput;
+use axum::{
+	extract::rejection::{ExtensionRejection, PathRejection, TypedHeaderRejection},
+	headers::{authorization::Bearer, Authorization},
+	response::{IntoResponse, Response},
+	Json,
+	TypedHeader,
+};
+use http::StatusCode;
+use schemars::{JsonSchema, _serde_json::json};
+use sea_orm::{DbErr, TransactionError};
+use serde::Serialize;
+use serde_json;
 
-/// Chet unified error wrapper
-#[derive(Deserialize, Serialize, Clone, Debug)]
-pub struct ChetError {
-	pub code: String,
-	pub message: String,
+/// A short-hand version of a [std::result::Result] that always returns an
+/// [Error].
+pub type Result<T> = std::result::Result<T, Error>;
+
+/// ================================================================================================
+/// Generic Error
+/// ================================================================================================
+
+#[derive(Debug, Clone)]
+pub enum ErrorType {
+	/// A generic error
+	Generic(String),
+	/// Database error
+	Database(String),
+	/// Queue error
+	Queue(String),
+	/// Database error
+	Validation(String),
+	/// Any kind of HttpError
+	Http(HttpError),
+	/// Cache error
+	Cache(String),
+	/// Timeout error
+	Timeout(String),
 }
 
-impl ChetError {
-	fn error(code: &str, msg: &str) -> ChetError {
-		warn!("[Chet.Error] {}:{}", code, msg);
-		ChetError {
-			code: code.to_string(),
-			message: msg.to_string(),
+/// The error type returned from the Svix API
+#[derive(Debug)]
+pub struct Error {
+	// the file name and line number of the error. Used for debugging non Http errors
+	pub trace: Vec<&'static str>,
+	pub typ: ErrorType,
+}
+
+/// implementation for [`Error`]
+impl Error {
+	pub fn generic(s: impl fmt::Display, location: &'static str) -> Self {
+		Self {
+			trace: Self::init_trace(location),
+			typ: ErrorType::Generic(s.to_string()),
 		}
 	}
 
-	pub fn bad_request(msg: &str) -> ChetError {
-		Self::error("400", msg)
+	pub fn database(s: impl fmt::Display, location: &'static str) -> Self {
+		Self {
+			trace: Self::init_trace(location),
+			typ: ErrorType::Database(s.to_string()),
+		}
 	}
 
-	pub fn conflict(msg: &str) -> ChetError {
-		Self::error("409", msg)
+	pub fn queue(s: impl fmt::Display, location: &'static str) -> Self {
+		Self {
+			trace: Self::init_trace(location),
+			typ: ErrorType::Queue(s.to_string()),
+		}
 	}
 
-	pub fn format_error(msg: &str) -> ChetError {
-		Self::error("406", msg)
+	pub fn validation(s: impl fmt::Display, location: &'static str) -> Self {
+		Self {
+			trace: Self::init_trace(location),
+			typ: ErrorType::Validation(s.to_string()),
+		}
 	}
 
-	pub fn io_error(msg: &str) -> ChetError {
-		Self::error("503", msg)
+	pub fn http(h: HttpError) -> Self {
+		Self {
+			trace: vec![], // no debugging necessary
+			typ: ErrorType::Http(h),
+		}
 	}
 
-	pub fn internal_error(msg: &str) -> ChetError {
-		Self::error("500", msg)
+	pub fn cache(s: impl fmt::Display, location: &'static str) -> Self {
+		Self {
+			trace: Self::init_trace(location),
+			typ: ErrorType::Cache(s.to_string()),
+		}
 	}
-}
 
-impl Display for ChetError {
-	fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-		write!(f, "<{}> {}", self.code, self.message)
-	}
-}
-
-impl From<std::io::Error> for ChetError {
-	fn from(error: std::io::Error) -> Self {
-		ChetError::io_error(&format!("[Chet.Basic] {error}"))
-	}
-}
-
-impl From<Utf8Error> for ChetError {
-	fn from(error: Utf8Error) -> Self {
-		ChetError::format_error(&format!("[Tardis.Basic] {error}"))
-	}
-}
-
-impl From<FromUtf8Error> for ChetError {
-	fn from(error: FromUtf8Error) -> Self {
-		ChetError::format_error(&format!("[Tardis.Basic] {error}"))
+	fn init_trace(location: &'static str) -> Vec<&'static str> {
+		let mut trace = Vec::with_capacity(10); // somewhat arbitrary capacity, but avoids reallocation when building an error
+										// trace later on
+		trace.push(location);
+		trace
 	}
 }
 
-impl From<URLParseError> for ChetError {
-	fn from(error: URLParseError) -> Self {
-		ChetError::format_error(&format!("[Tardis.Basic] {error}"))
+impl fmt::Display for Error {
+	fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+		self.typ.fmt(f)
 	}
 }
 
-impl From<ParseIntError> for ChetError {
-	fn from(error: ParseIntError) -> Self {
-		ChetError::format_error(&format!("[Tardis.Basic] {error}"))
+impl error::Error for Error {
+	fn source(&self) -> Option<&(dyn error::Error + 'static)> {
+		None
 	}
 }
 
-impl From<Infallible> for ChetError {
-	fn from(error: Infallible) -> Self {
-		ChetError::format_error(&format!("[Tardis.Basic] {error}"))
+impl IntoResponse for Error {
+	fn into_response(self) -> Response {
+		match self.typ {
+			ErrorType::Http(s) => {
+				tracing::debug!("{:?}, location: {:?}", &s, &self.trace);
+				s.into_response()
+			}
+			s => {
+				tracing::error!("type: {:?}, location: {:?}", s, &self.trace);
+				(StatusCode::INTERNAL_SERVER_ERROR, Json(json!({}))).into_response()
+			}
+		}
 	}
 }
 
-impl From<base64::DecodeError> for ChetError {
-	fn from(error: base64::DecodeError) -> Self {
-		ChetError::format_error(&format!("[Tardis.Basic] {error}"))
+impl OperationOutput for Error {
+	type Inner = Self;
+}
+
+/// ================================================================================================
+/// Validation Error
+/// ================================================================================================
+
+/// Validation errors have their own schema to provide context for invalid
+/// requests eg. mismatched types and out of bounds values. There may be any
+/// number of these per 422 UNPROCESSABLE ENTITY error.
+#[derive(Debug, Clone, Serialize, PartialEq, Eq, JsonSchema)]
+pub struct ValidationErrorItem {
+	/// The location as a [`Vec`] of [`String`]s -- often in the form `["body",
+	/// "field_name"]`, `["query", "field_name"]`, etc. They may, however, be
+	/// arbitarily deep.
+	pub loc: Vec<String>,
+
+	/// The message accompanying the validation error item.
+	pub msg: String,
+
+	/// The type of error, often "type_error" or "value_error", but sometimes
+	/// with more context like as "value_error.number.not_ge"
+	#[serde(rename = "type")]
+	pub ty: String,
+}
+
+/// ================================================================================================
+/// HTTP Error Section
+/// ================================================================================================
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(untagged)]
+pub enum HttpErrorBody {
+	Standard { code: String, detail: String },
+	Validation { detail: Vec<ValidationErrorItem> },
+}
+
+#[derive(Debug, Clone)]
+pub struct HttpError {
+	pub status: StatusCode,
+	body: HttpErrorBody,
+}
+
+impl HttpError {
+	fn new_standard(status: StatusCode, code: String, detail: String) -> Self {
+		Self {
+			status,
+			body: HttpErrorBody::Standard { code, detail },
+		}
+	}
+	pub fn bad_request(code: Option<String>, detail: Option<String>) -> Self {
+		Self::new_standard(
+			StatusCode::BAD_REQUEST,
+			code.unwrap_or_else(|| "generic_error".to_owned()),
+			detail.unwrap_or_else(|| "Generic error".to_owned()),
+		)
+	}
+
+	pub fn not_found(code: Option<String>, detail: Option<String>) -> Self {
+		Self::new_standard(
+			StatusCode::NOT_FOUND,
+			code.unwrap_or_else(|| "not_found".to_owned()),
+			detail.unwrap_or_else(|| "Entity not found".to_owned()),
+		)
+	}
+
+	pub fn unauthorized(code: Option<String>, detail: Option<String>) -> Self {
+		Self::new_standard(
+			StatusCode::UNAUTHORIZED,
+			code.unwrap_or_else(|| "authentication_failed".to_owned()),
+			detail.unwrap_or_else(|| "Incorrect authentication credentials.".to_owned()),
+		)
+	}
+
+	pub fn permission_denied(code: Option<String>, detail: Option<String>) -> Self {
+		Self::new_standard(
+			StatusCode::FORBIDDEN,
+			code.unwrap_or_else(|| "insufficient access".to_owned()),
+			detail.unwrap_or_else(|| "Insufficient access for the given operation.".to_owned()),
+		)
+	}
+
+	pub fn conflict(code: Option<String>, detail: Option<String>) -> Self {
+		Self::new_standard(
+			StatusCode::CONFLICT,
+			code.unwrap_or_else(|| "conflict".to_owned()),
+			detail.unwrap_or_else(|| "A conflict has occurred".to_owned()),
+		)
+	}
+
+	pub fn unprocessable_entity(detail: Vec<ValidationErrorItem>) -> Self {
+		Self {
+			status: StatusCode::UNPROCESSABLE_ENTITY,
+			body: HttpErrorBody::Validation { detail },
+		}
+	}
+
+	pub fn internal_server_error(code: Option<String>, detail: Option<String>) -> Self {
+		Self::new_standard(
+			StatusCode::INTERNAL_SERVER_ERROR,
+			code.unwrap_or_else(|| "server_error".to_owned()),
+			detail.unwrap_or_else(|| "Internal Server Error".to_owned()),
+		)
+	}
+
+	pub fn not_implemented(code: Option<String>, detail: Option<String>) -> Self {
+		Self::new_standard(
+			StatusCode::NOT_IMPLEMENTED,
+			code.unwrap_or_else(|| "not_implemented".to_owned()),
+			detail.unwrap_or_else(|| "This API endpoint is not yet implemented.".to_owned()),
+		)
 	}
 }
 
-impl From<FromHexError> for ChetError {
-	fn from(error: FromHexError) -> Self {
-		ChetError::format_error(&format!("[Tardis.Basic] {error}"))
+impl From<HttpError> for Error {
+	fn from(err: HttpError) -> Error {
+		Error::http(err)
 	}
 }
 
-impl From<regex::Error> for ChetError {
-	fn from(error: regex::Error) -> Self {
-		ChetError::format_error(&format!("[Tardis.Basic] {error}"))
+impl IntoResponse for HttpError {
+	fn into_response(self) -> Response {
+		(self.status, Json(self.body)).into_response()
 	}
 }
 
-impl From<TryFromIntError> for ChetError {
-	fn from(error: TryFromIntError) -> Self {
-		ChetError::format_error(&format!("[Tardis.Basic] {error}"))
+impl fmt::Display for HttpError {
+	fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+		match &self.body {
+			HttpErrorBody::Standard { code, detail } => write!(f, "status={} code=\"{}\" detail=\"{}\"", self.status, code, detail),
+
+			HttpErrorBody::Validation { detail } => {
+				write!(
+					f,
+					"status={} detail={}",
+					self.status,
+					serde_json::to_string(&detail).unwrap_or_else(|e| format!("\"unserializable error for {e}\""))
+				)
+			}
+		}
 	}
 }
 
-impl<P> From<PoisonError<RwLockReadGuard<'_, P>>> for ChetError {
-	fn from(error: PoisonError<RwLockReadGuard<'_, P>>) -> Self {
-		ChetError::conflict(&format!("[Tardis.Basic] {error}"))
+/// ================================================================================================
+
+pub trait Traceable<T> {
+	fn trace(self, location: &'static str) -> Result<T>;
+}
+
+/// Adds [location!] data to the given result, returning a
+/// [crate::error::Result<T>].
+#[macro_export]
+macro_rules! ctx {
+	($res:expr) => {
+		$crate::error::Traceable::trace($res, $crate::location!())
+	};
+}
+
+impl<T> Traceable<T> for Result<T> {
+	fn trace(self, location: &'static str) -> Result<T> {
+		self.map_err(|mut e| {
+			e.trace.push(location);
+			e
+		})
 	}
 }
 
-impl<P> From<PoisonError<RwLockWriteGuard<'_, P>>> for ChetError {
-	fn from(error: PoisonError<RwLockWriteGuard<'_, P>>) -> Self {
-		ChetError::conflict(&format!("[Tardis.Basic] {error}"))
+impl<T> Traceable<T> for std::result::Result<T, DbErr> {
+	fn trace(self, location: &'static str) -> Result<T> {
+		self.map_err(|e| Error::database(e, location))
+	}
+}
+
+impl<T> Traceable<T> for std::result::Result<T, redis::RedisError> {
+	fn trace(self, location: &'static str) -> Result<T> {
+		self.map_err(|e| Error::queue(e, location))
+	}
+}
+
+impl<T> Traceable<T> for std::result::Result<T, ExtensionRejection> {
+	fn trace(self, location: &'static str) -> Result<T> {
+		self.map_err(|e| Error::generic(e, location))
+	}
+}
+
+impl<T> Traceable<T> for std::result::Result<T, PathRejection> {
+	fn trace(self, location: &'static str) -> Result<T> {
+		self.map_err(|e| Error::generic(e, location))
+	}
+}
+
+impl Traceable<TypedHeader<Authorization<Bearer>>> for std::result::Result<TypedHeader<Authorization<Bearer>>, TypedHeaderRejection> {
+	fn trace(self, _location: &'static str) -> Result<TypedHeader<Authorization<Bearer>>> {
+		self.map_err(|_err| HttpError::unauthorized(None, Some("Invalid token".to_string())).into())
+	}
+}
+
+impl<T> Traceable<T> for std::result::Result<T, TransactionError<Error>> {
+	fn trace(self, location: &'static str) -> Result<T> {
+		self.map_err(|e| match e {
+			TransactionError::Connection(db_err) => Error::database(db_err, location),
+			TransactionError::Transaction(crate_err) => crate_err, // preserve the trace that comes from within the transaction
+		})
 	}
 }

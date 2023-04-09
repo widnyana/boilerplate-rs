@@ -16,7 +16,7 @@ build: ## Builds the app for current os-arch
 	@make test && cargo build --release
 
 run: ## Runs the app
-	@CARGO_INCREMENTAL=1 cargo fmt && make lint && cargo run --bin backend
+	@CARGO_INCREMENTAL=1 cargo run --bin backend
 
 lint: ## Run clippy
 	@find . -type f | grep '\/src\/.*\.rs'| xargs touch && cargo clippy --all-targets --workspace

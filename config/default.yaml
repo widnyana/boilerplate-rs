@@ -18,3 +18,8 @@ log:
 
 redis:
   url: "localhost:6379"
+
+tracing:
+  otel_address: "http://localhost:4137"
+  otel_sample_ratio: 1.0
+  db_tracing: true

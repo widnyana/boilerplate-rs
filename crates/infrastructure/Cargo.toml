@@ -3,53 +3,52 @@ name = "infrastructure"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
-axum.workspace = true
+axum = { workspace = true }
+http = "0.2.9"
+tower-http = { workspace = true}
+tokio = { workspace = true }
+
+### Database
+sqlx = { workspace = true }
+sea-orm = { workspace = true }
+
+### Tracing
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+
+### OpenTelemetry
+# opentelemetry = { workspace = true }
+# opentelemetry-http = { workspace = true }
+# opentelemetry-otlp = { workspace = true }
+# tracing-opentelemetry = "0.18.0"
+
+### Cache
+redis = { version = "0.23.0", features = ["tokio-comp", "tokio-native-tls-comp", "streams"] }
+
+
+### serialization
+figment = { version = "0.10.8", features = ["json", "env", "yaml"] }
+schemars = { workspace = true }
+serde = {workspace = true}
+serde_json = { workspace = true, features = ["arbitrary_precision"] }
+
+### State of the art password hashing.
+argon2 = "0.5.0"
+
+### Utility Crates
+aide = { workspace = true }
 anyhow = "1.0.69"
 async-trait = "0.1.68"
-figment = { version = "0.10.8", features = ["json", "env", "yaml"] }
-once_cell = "1.17.1"
-sea-orm = { workspace = true, features = [
-    "macros",
-    "mock",
-    "runtime-tokio-rustls",
-    "sqlx-postgres",
-    "chrono",
-    "with-json",
-    "postgres-array",
-    "sqlx",
-] }
-tower-http = { workspace = true, features = [
-	"cors",
-	"fs",
-	"compression-gzip",
-	"metrics",
-	"tower",
-	"trace",
-	"add-extension",
-	"auth",
-	"base64",
-	"full",
-] }
-thiserror = "1.0.39"
-tracing.workspace = true
-tracing-subscriber = { version = "0.3.16", features = [
-	"env-filter",
-	"serde_json",
-	"time",
-	"json",
-] }
-serde.workspace = true
-lazy_static.workspace = true
-regex.workspace = true
-hex = "0.4.3"
 base64 = "0.21.0"
+hex = "0.4.3"
+lazy_static = {workspace = true}
+once_cell = "1.17.1"
+rand = "0.8.4"
+regex = {workspace = true}
+thiserror = "1.0.39"
 url = "2.3.1"
-tracing-opentelemetry = { version = "0.18.0", features = ["thiserror", "async-trait"] }
-http = "0.2.9"
-
 
 
 [lib]

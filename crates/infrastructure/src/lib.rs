@@ -9,6 +9,7 @@ pub mod context;
 pub mod env;
 pub mod errors;
 pub mod http;
+pub mod openapi;
 pub mod rdbms;
-pub mod result;
+pub mod signal;
 pub mod tracing;
