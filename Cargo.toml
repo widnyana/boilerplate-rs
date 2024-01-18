@@ -1,7 +1,7 @@
 [workspace]
 members = ["backend", "crates/common", "crates/infrastructure"]
 exclude = [".cargo", "unused"]
-
+resolver = "2"
 
 [workspace.dependencies]
 axum = { version = "0.6.10", features = ["headers"]}
@@ -20,7 +20,7 @@ tower-http = { version = "0.4.0", features = ["cors",
 
 ### Database
 sqlx = { version = "0.6.2", features = [ "runtime-tokio-rustls", "postgres", "migrate" ] }
-sea-orm = { version = "0.11.0", features = ["macros",
+sea-orm = { version = "0.11.0", default_features = false, features = ["macros",
 	"mock",
 	"runtime-tokio-rustls",
 	"sqlx-postgres",
